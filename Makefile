@@ -1,4 +1,4 @@
-.PHONY: bitly-up bitly-test bitly-test-clean bitly-down dropbox-up dropbox-test dropbox-test-clean dropbox-down gopuff-up gopuff-test gopuff-test-clean gopuff-down youtube-up youtube-test youtube-test-clean youtube-down web-crawler-up web-crawler-test web-crawler-test-clean web-crawler-down ad-click-aggregator-up ad-click-aggregator-test ad-click-aggregator-test-clean ad-click-aggregator-down test
+.PHONY: bitly-up bitly-test bitly-test-clean bitly-down dropbox-up dropbox-test dropbox-test-clean dropbox-down gopuff-up gopuff-test gopuff-test-clean gopuff-down youtube-up youtube-test youtube-test-clean youtube-down web-crawler-up web-crawler-test web-crawler-test-clean web-crawler-down ad-click-aggregator-up ad-click-aggregator-test ad-click-aggregator-test-clean ad-click-aggregator-down news-aggregator-up news-aggregator-test news-aggregator-test-clean news-aggregator-down test
 
 bitly-up:
 	cd examples/bitly && docker compose up --build
@@ -72,4 +72,16 @@ ad-click-aggregator-test-clean:
 ad-click-aggregator-down:
 	cd examples/ad-click-aggregator && docker compose down --remove-orphans
 
-test: bitly-test dropbox-test gopuff-test youtube-test web-crawler-test ad-click-aggregator-test
+news-aggregator-up:
+	cd examples/news-aggregator && docker compose up --build
+
+news-aggregator-test:
+	cd examples/news-aggregator && trap 'docker compose down --remove-orphans' EXIT; docker compose up --build -d --remove-orphans && docker compose exec -T api-a python -m pytest -q && python scripts/smoke_test.py
+
+news-aggregator-test-clean:
+	cd examples/news-aggregator && docker compose down -v --remove-orphans
+
+news-aggregator-down:
+	cd examples/news-aggregator && docker compose down --remove-orphans
+
+test: bitly-test dropbox-test gopuff-test youtube-test web-crawler-test ad-click-aggregator-test news-aggregator-test

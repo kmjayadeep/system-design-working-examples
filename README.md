@@ -12,6 +12,7 @@ Runnable prototypes for common system design problems. Each example is intention
 | [YouTube Video Streaming](examples/youtube) | [Hello Interview YouTube](https://www.hellointerview.com/learn/system-design/problem-breakdowns/youtube) | Presigned large-video uploads, resumable multipart upload state, segment processing, manifests, and cached playback metadata | Python, FastAPI, Nginx, Postgres, Redis, MinIO, Docker Compose |
 | [Web Crawler](examples/web-crawler) | [Hello Interview Web Crawler](https://www.hellointerview.com/learn/system-design/problem-breakdowns/web-crawler) | URL frontier queue, crawl dedupe, host politeness, raw/text blob storage, and crawl progress tracking | Python, FastAPI, Nginx, Postgres, Redis, MinIO, Docker Compose |
 | [Ad Click Aggregator](examples/ad-click-aggregator) | [Hello Interview Ad Click Aggregator](https://www.hellointerview.com/learn/system-design/problem-breakdowns/ad-click-aggregator) | Server-side click redirects, Redis click buffering, idempotent event processing, and minute-level aggregate queries | Python, FastAPI, Nginx, Postgres, Redis, Docker Compose |
+| [News Aggregator](examples/news-aggregator) | [Hello Interview News Aggregator](https://www.hellointerview.com/learn/system-design/problem-breakdowns/google-news) | Publisher ingestion, cached feed reads, cursor pagination, category feeds, and publisher redirects | Python, FastAPI, Nginx, Postgres, Redis, Docker Compose |
 
 ## Requirements
 
@@ -39,6 +40,7 @@ make gopuff-test
 make youtube-test
 make web-crawler-test
 make ad-click-aggregator-test
+make news-aggregator-test
 ```
 
 ## Repository Layout
@@ -74,6 +76,11 @@ examples/
     scripts/
     docker-compose.yml
   ad-click-aggregator/
+    app/
+    tests/
+    scripts/
+    docker-compose.yml
+  news-aggregator/
     app/
     tests/
     scripts/
