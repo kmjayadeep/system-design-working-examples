@@ -1,4 +1,4 @@
-.PHONY: bitly-up bitly-test bitly-test-clean bitly-down dropbox-up dropbox-test dropbox-test-clean dropbox-down gopuff-up gopuff-test gopuff-test-clean gopuff-down youtube-up youtube-test youtube-test-clean youtube-down test
+.PHONY: bitly-up bitly-test bitly-test-clean bitly-down dropbox-up dropbox-test dropbox-test-clean dropbox-down gopuff-up gopuff-test gopuff-test-clean gopuff-down youtube-up youtube-test youtube-test-clean youtube-down web-crawler-up web-crawler-test web-crawler-test-clean web-crawler-down test
 
 bitly-up:
 	cd examples/bitly && docker compose up --build
@@ -48,4 +48,16 @@ youtube-test-clean:
 youtube-down:
 	cd examples/youtube && docker compose down --remove-orphans
 
-test: bitly-test dropbox-test gopuff-test youtube-test
+web-crawler-up:
+	cd examples/web-crawler && docker compose up --build
+
+web-crawler-test:
+	cd examples/web-crawler && trap 'docker compose down --remove-orphans' EXIT; docker compose up --build -d --remove-orphans && docker compose exec -T api-a python -m pytest -q && python scripts/smoke_test.py
+
+web-crawler-test-clean:
+	cd examples/web-crawler && docker compose down -v --remove-orphans
+
+web-crawler-down:
+	cd examples/web-crawler && docker compose down --remove-orphans
+
+test: bitly-test dropbox-test gopuff-test youtube-test web-crawler-test
