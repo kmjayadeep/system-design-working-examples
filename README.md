@@ -13,6 +13,7 @@ Runnable prototypes for common system design problems. Each example is intention
 | [Web Crawler](examples/web-crawler) | [Hello Interview Web Crawler](https://www.hellointerview.com/learn/system-design/problem-breakdowns/web-crawler) | URL frontier queue, crawl dedupe, host politeness, raw/text blob storage, and crawl progress tracking | Python, FastAPI, Nginx, Postgres, Redis, MinIO, Docker Compose |
 | [Ad Click Aggregator](examples/ad-click-aggregator) | [Hello Interview Ad Click Aggregator](https://www.hellointerview.com/learn/system-design/problem-breakdowns/ad-click-aggregator) | Server-side click redirects, Redis click buffering, idempotent event processing, and minute-level aggregate queries | Python, FastAPI, Nginx, Postgres, Redis, Docker Compose |
 | [News Aggregator](examples/news-aggregator) | [Hello Interview News Aggregator](https://www.hellointerview.com/learn/system-design/problem-breakdowns/google-news) | Publisher ingestion, cached feed reads, cursor pagination, category feeds, and publisher redirects | Python, FastAPI, Nginx, Postgres, Redis, Docker Compose |
+| [Yelp Business Search](examples/yelp) | [Hello Interview Yelp](https://www.hellointerview.com/learn/system-design/problem-breakdowns/yelp) | Business search by name/category/location, cached search results, review writes, one-review-per-user, and average rating updates | Python, FastAPI, Nginx, Postgres, Redis, Docker Compose |
 
 ## Requirements
 
@@ -41,6 +42,7 @@ make youtube-test
 make web-crawler-test
 make ad-click-aggregator-test
 make news-aggregator-test
+make yelp-test
 ```
 
 ## Repository Layout
@@ -81,6 +83,11 @@ examples/
     scripts/
     docker-compose.yml
   news-aggregator/
+    app/
+    tests/
+    scripts/
+    docker-compose.yml
+  yelp/
     app/
     tests/
     scripts/
