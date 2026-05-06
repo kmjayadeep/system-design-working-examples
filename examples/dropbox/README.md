@@ -3,6 +3,7 @@
 Small Docker Compose prototype for a Dropbox-style file storage service:
 
 - FastAPI file service
+- Nginx reverse proxy in front of two FastAPI replicas
 - Postgres metadata, share, chunk, and change-event tables
 - MinIO as local S3-compatible blob storage
 - Presigned URLs so file bytes go directly between client and blob storage
@@ -21,6 +22,8 @@ API docs: <http://localhost:8010/docs>
 
 MinIO console: <http://localhost:9002>
 
+Runtime data is intentionally ephemeral. Postgres and MinIO use tmpfs-backed data paths, so `docker compose down` wipes local metadata and files.
+
 Credentials:
 
 ```text
@@ -32,29 +35,39 @@ minioadmin / minioadmin
 ```mermaid
 flowchart LR
     client[Client / Device]
-    api[FastAPI File Service]
+    proxy[Nginx Proxy]
+    apiA[FastAPI Replica A]
+    apiB[FastAPI Replica B]
     db[(Postgres Metadata DB)]
     blob[(MinIO / S3 Blob Storage)]
     other[Other Devices]
 
-    client -- "POST /files/presigned-url" --> api
-    api -- "metadata: pending" --> db
-    api -- "presigned PUT URL" --> client
+    client -- "POST /files/presigned-url" --> proxy
+    proxy --> apiA
+    proxy --> apiB
+    apiA -- "metadata: pending" --> db
+    apiB -- "metadata: pending" --> db
+    proxy -- "presigned PUT URL" --> client
     client -- "PUT bytes directly" --> blob
-    client -- "POST /files/{id}/complete" --> api
-    api -- "HEAD object + status uploaded" --> blob
-    api -- "change event: created" --> db
+    client -- "POST /files/{id}/complete" --> proxy
+    apiA -- "HEAD object + status uploaded" --> blob
+    apiB -- "HEAD object + status uploaded" --> blob
+    apiA -- "change event: created" --> db
+    apiB -- "change event: created" --> db
 
-    client -- "GET /files/{id}" --> api
-    api -- "auth + metadata lookup" --> db
-    api -- "presigned GET URL" --> client
+    client -- "GET /files/{id}" --> proxy
+    apiA -- "auth + metadata lookup" --> db
+    apiB -- "auth + metadata lookup" --> db
+    proxy -- "presigned GET URL" --> client
     client -- "download bytes" --> blob
 
-    client -- "POST /files/{id}/share" --> api
-    api -- "file_shares + shared events" --> db
+    client -- "POST /files/{id}/share" --> proxy
+    apiA -- "file_shares + shared events" --> db
+    apiB -- "file_shares + shared events" --> db
 
-    other -- "GET /files/changes?since=N" --> api
-    api -- "per-user change log" --> db
+    other -- "GET /files/changes?since=N" --> proxy
+    apiA -- "per-user change log" --> db
+    apiB -- "per-user change log" --> db
 ```
 
 ## API
@@ -161,7 +174,7 @@ python scripts/smoke_test.py
 Run unit tests inside the API container:
 
 ```bash
-docker compose exec -T api python -m pytest -q
+docker compose exec -T api-a python -m pytest -q
 ```
 
 ## Design Notes

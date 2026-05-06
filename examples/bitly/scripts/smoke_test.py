@@ -24,7 +24,7 @@ def post_json(path, payload):
     request = Request(
         BASE_URL + path,
         data=json.dumps(payload).encode(),
-        headers={"content-type": "application/json"},
+        headers={"content-type": "application/json", "connection": "close"},
         method="POST",
     )
     try:
@@ -40,14 +40,28 @@ def post_json(path, payload):
 
 
 def get_without_redirect(path):
+    request = Request(BASE_URL + path, headers={"connection": "close"}, method="GET")
     try:
-        with opener.open(Request(BASE_URL + path, method="GET"), timeout=5) as response:
+        with opener.open(request, timeout=5) as response:
             return response.status, dict(response.headers), response.read().decode()
     except HTTPError as exc:
         return exc.code, dict(exc.headers), exc.read().decode()
 
 
+def get_json(path):
+    request = Request(BASE_URL + path, headers={"connection": "close"}, method="GET")
+    with opener.open(request, timeout=5) as response:
+        return response.status, json.loads(response.read())
+
+
 def main():
+    instances = set()
+    for _ in range(8):
+        status, body = get_json("/debug/instance")
+        assert status == 200, (status, body)
+        instances.add(body["instance"])
+    assert len(instances) >= 2, instances
+
     status, _, generated = post_json(
         "/shorten", {"long_url": "https://example.com/generated"}
     )
@@ -98,6 +112,7 @@ def main():
     status, _, body = get_without_redirect("/missing-code-for-test")
     assert status == 404, (status, body)
 
+    print(f"ok proxy instances={sorted(instances)}")
     print(f"ok generated={code}")
     print(f"ok custom={alias}")
     print(f"ok expired={expiring_alias}")

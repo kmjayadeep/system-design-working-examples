@@ -1,0 +1,4 @@
+interface:
+  display_name: "Create System Design Example"
+  short_description: "Scaffold runnable system design examples for this repo."
+  default_prompt: "Create a new runnable system design example in this repository."

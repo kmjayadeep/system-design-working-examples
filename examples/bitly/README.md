@@ -3,6 +3,7 @@
 Small Docker Compose prototype for the Bitly-style design:
 
 - FastAPI primary server
+- Nginx reverse proxy in front of two FastAPI replicas
 - Postgres mapping store with `short_code` primary-key uniqueness
 - Redis atomic counter for generated codes
 - Redis read-through cache for redirects
@@ -17,25 +18,35 @@ docker compose up --build
 
 API docs: <http://localhost:8000/docs>
 
+Runtime data is intentionally ephemeral. Postgres uses tmpfs and Redis persistence is disabled, so `docker compose down` wipes local state.
+
 ## Diagram
 
 ```mermaid
 flowchart LR
     client[Client / Browser]
-    api[FastAPI Primary Server]
+    proxy[Nginx Proxy]
+    apiA[FastAPI Replica A]
+    apiB[FastAPI Replica B]
     redis[(Redis)]
     postgres[(Postgres)]
     cleanup[Cleanup Task]
 
-    client -- "POST /shorten" --> api
-    api -- "INCR shortener:counter" --> redis
-    api -- "INSERT short_code mapping" --> postgres
-    api -- "short_url" --> client
+    client -- "POST /shorten" --> proxy
+    proxy --> apiA
+    proxy --> apiB
+    apiA -- "INCR shortener:counter" --> redis
+    apiB -- "INCR shortener:counter" --> redis
+    apiA -- "INSERT short_code mapping" --> postgres
+    apiB -- "INSERT short_code mapping" --> postgres
+    proxy -- "short_url" --> client
 
-    client -- "GET /{short_code}" --> api
-    api -- "read-through cache lookup" --> redis
-    api -- "cache miss: SELECT mapping" --> postgres
-    api -- "302 Location: long_url" --> client
+    client -- "GET /{short_code}" --> proxy
+    apiA -- "read-through cache lookup" --> redis
+    apiB -- "read-through cache lookup" --> redis
+    apiA -- "cache miss: SELECT mapping" --> postgres
+    apiB -- "cache miss: SELECT mapping" --> postgres
+    proxy -- "302 Location: long_url" --> client
 
     cleanup -- "DELETE expired rows" --> postgres
     cleanup -- "evict expired cache keys" --> redis
@@ -104,7 +115,7 @@ python scripts/smoke_test.py
 Run unit tests inside the API container:
 
 ```bash
-docker compose exec -T api python -m pytest -q
+docker compose exec -T api-a python -m pytest -q
 ```
 
 Create an expiring URL:
@@ -118,3 +129,5 @@ curl -s -X POST http://localhost:8000/shorten \
 ## Design Notes
 
 Generated codes use Redis `INCR`, XOR obfuscation, and base62 encoding with a reserved `g` prefix. Custom aliases are kept out of that namespace, which avoids alias collisions with generated codes. Redirects read Redis first, then Postgres, and cache database misses only by omission so newly-created links are immediately visible.
+
+Source: <https://www.hellointerview.com/learn/system-design/problem-breakdowns/bitly>

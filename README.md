@@ -4,10 +4,10 @@ Runnable prototypes for common system design problems. Each example is intention
 
 ## Examples
 
-| Example | What it demonstrates | Stack |
-| --- | --- | --- |
-| [Bitly URL Shortener](examples/bitly) | Short URL creation, custom aliases, expiration, Redis counters, read-through cache, and `302` redirects | Python, FastAPI, Postgres, Redis, Docker Compose |
-| [Dropbox File Sync](examples/dropbox) | Presigned uploads/downloads, metadata storage, sharing, sync change logs, and multipart resumable uploads | Python, FastAPI, Postgres, MinIO, Docker Compose |
+| Example | Reference | What it demonstrates | Stack |
+| --- | --- | --- | --- |
+| [Bitly URL Shortener](examples/bitly) | [Hello Interview Bitly](https://www.hellointerview.com/learn/system-design/problem-breakdowns/bitly) | Short URL creation, custom aliases, expiration, Redis counters, read-through cache, proxy load balancing, and `302` redirects | Python, FastAPI, Nginx, Postgres, Redis, Docker Compose |
+| [Dropbox File Sync](examples/dropbox) | [Hello Interview Dropbox](https://www.hellointerview.com/learn/system-design/problem-breakdowns/dropbox) | Presigned uploads/downloads, metadata storage, sharing, sync change logs, proxy load balancing, and multipart resumable uploads | Python, FastAPI, Nginx, Postgres, MinIO, Docker Compose |
 
 ## Requirements
 
@@ -24,6 +24,8 @@ docker compose up --build
 
 See each example's README for API details, diagrams, and test commands.
 
+The examples are intentionally disposable: database/object-store data is backed by container tmpfs or in-memory settings and is wiped by `docker compose down`.
+
 Or use the root Makefile:
 
 ```bash
@@ -34,6 +36,9 @@ make dropbox-test
 ## Repository Layout
 
 ```text
+.codex/
+  skills/
+    create-system-design-example/
 examples/
   bitly/
     app/
@@ -46,6 +51,10 @@ examples/
     scripts/
     docker-compose.yml
 ```
+
+## Project Skill
+
+This repo includes a local Codex skill at `.codex/skills/create-system-design-example` for adding future examples with the same conventions: Docker Compose, two API replicas, Nginx as the load balancer/API gateway analogue, ephemeral data stores, README diagrams, Makefile targets, and smoke tests.
 
 ## License
 

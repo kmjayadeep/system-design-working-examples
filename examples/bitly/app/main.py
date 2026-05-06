@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import socket
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from typing import Annotated
@@ -237,6 +238,11 @@ async def health(state: Annotated[AppState, Depends(get_state)]):
     async with state.db.acquire() as conn:
         await conn.fetchval("SELECT 1")
     return {"status": "ok"}
+
+
+@app.get("/debug/instance")
+async def debug_instance():
+    return {"instance": socket.gethostname()}
 
 
 @app.post("/shorten", response_model=ShortenResponse, status_code=201)

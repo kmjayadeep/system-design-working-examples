@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import boto3
+from botocore.exceptions import ClientError
 from botocore.client import Config
 
 from app.config import Settings
@@ -22,7 +23,12 @@ def ensure_bucket(settings: Settings) -> None:
     buckets = client.list_buckets().get("Buckets", [])
     if any(bucket["Name"] == settings.s3_bucket for bucket in buckets):
         return
-    client.create_bucket(Bucket=settings.s3_bucket)
+    try:
+        client.create_bucket(Bucket=settings.s3_bucket)
+    except ClientError as exc:
+        code = exc.response.get("Error", {}).get("Code")
+        if code not in {"BucketAlreadyOwnedByYou", "BucketAlreadyExists"}:
+            raise
 
 
 def presigned_put_url(settings: Settings, object_key: str) -> str:

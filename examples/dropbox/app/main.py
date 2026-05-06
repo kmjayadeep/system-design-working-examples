@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 import json
+import socket
 import uuid
 from contextlib import asynccontextmanager
 from typing import Annotated
@@ -221,6 +222,11 @@ async def health(state: Annotated[AppState, Depends(get_state)]):
     async with state.db.acquire() as conn:
         await conn.fetchval("SELECT 1")
     return {"status": "ok"}
+
+
+@app.get("/debug/instance")
+async def debug_instance():
+    return {"instance": socket.gethostname()}
 
 
 @app.post("/files/presigned-url", response_model=PresignedUploadResponse, status_code=201)

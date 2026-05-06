@@ -13,6 +13,7 @@ def request_json(path, method="GET", payload=None, user_id="alice"):
         data=data,
         headers={
             "content-type": "application/json",
+            "connection": "close",
             "X-User-Id": user_id,
         },
         method=method,
@@ -30,17 +31,25 @@ def request_json(path, method="GET", payload=None, user_id="alice"):
 
 
 def put_bytes(url, content):
-    request = Request(url, data=content, method="PUT")
+    request = Request(url, data=content, headers={"connection": "close"}, method="PUT")
     with urlopen(request, timeout=10) as response:
         return response.status, dict(response.headers)
 
 
 def get_bytes(url):
-    with urlopen(url, timeout=10) as response:
+    request = Request(url, headers={"connection": "close"}, method="GET")
+    with urlopen(request, timeout=10) as response:
         return response.status, response.read()
 
 
 def main():
+    instances = set()
+    for _ in range(8):
+        status, body = request_json("/debug/instance")
+        assert status == 200, (status, body)
+        instances.add(body["instance"])
+    assert len(instances) >= 2, instances
+
     content = b"dropbox prototype file contents"
     status, upload = request_json(
         "/files/presigned-url",
@@ -131,6 +140,7 @@ def main():
         completed_multipart,
     )
 
+    print(f"ok proxy instances={sorted(instances)}")
     print(f"ok uploaded={file_id}")
     print("ok downloaded via presigned URL")
     print("ok shared with bob")
