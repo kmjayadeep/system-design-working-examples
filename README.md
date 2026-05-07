@@ -14,6 +14,7 @@ Runnable prototypes for common system design problems. Each example is intention
 | [Ad Click Aggregator](examples/ad-click-aggregator) | [Hello Interview Ad Click Aggregator](https://www.hellointerview.com/learn/system-design/problem-breakdowns/ad-click-aggregator) | Server-side click redirects, Redis click buffering, idempotent event processing, and minute-level aggregate queries | Python, FastAPI, Nginx, Postgres, Redis, Docker Compose |
 | [News Aggregator](examples/news-aggregator) | [Hello Interview News Aggregator](https://www.hellointerview.com/learn/system-design/problem-breakdowns/google-news) | Publisher ingestion, cached feed reads, cursor pagination, category feeds, and publisher redirects | Python, FastAPI, Nginx, Postgres, Redis, Docker Compose |
 | [Yelp Business Search](examples/yelp) | [Hello Interview Yelp](https://www.hellointerview.com/learn/system-design/problem-breakdowns/yelp) | Business search by name/category/location, cached search results, review writes, one-review-per-user, and average rating updates | Python, FastAPI, Nginx, Postgres, Redis, Docker Compose |
+| [Strava Activity Tracking](examples/strava) | [Hello Interview Strava](https://www.hellointerview.com/learn/system-design/problem-breakdowns/strava) | Live activity tracking, offline point batch upload, lifecycle transitions, route persistence, and friend feed reads | Python, FastAPI, Nginx, Postgres, Redis, Docker Compose |
 
 ## Requirements
 
@@ -43,6 +44,7 @@ make web-crawler-test
 make ad-click-aggregator-test
 make news-aggregator-test
 make yelp-test
+make strava-test
 ```
 
 ## Repository Layout
@@ -88,6 +90,11 @@ examples/
     scripts/
     docker-compose.yml
   yelp/
+    app/
+    tests/
+    scripts/
+    docker-compose.yml
+  strava/
     app/
     tests/
     scripts/
