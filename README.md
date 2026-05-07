@@ -34,6 +34,7 @@ Runnable prototypes for common system design problems. Each example is intention
 | [Job Scheduler](examples/job-scheduler) | [Hello Interview Job Scheduler](https://www.hellointerview.com/learn/system-design/problem-breakdowns/job-scheduler) | Scheduled jobs, due-job claiming, retries, terminal failure, and execution history | Python, FastAPI, Nginx, Postgres, Redis, Docker Compose |
 | [Payment System](examples/payment-system) | [Hello Interview Payment System](https://www.hellointerview.com/learn/system-design/problem-breakdowns/payment-system) | Payment method storage, idempotent capture, balanced ledger entries, replay detection, and refunds | Python, FastAPI, Nginx, Postgres, Redis, Docker Compose |
 | [Metrics Monitoring](examples/metrics-monitoring) | [Hello Interview Metrics Monitoring](https://www.hellointerview.com/learn/system-design/problem-breakdowns/metrics-monitoring) | Metric ingestion, Redis time-series storage, series queries, alert rules, and alert evaluation | Python, FastAPI, Nginx, Redis, Docker Compose |
+| [Slack Messaging](examples/slack) | [Tech Interview Design Slack](https://www.techinterview.org/post/3233474302/system-design-design-slack-enterprise-messaging-channels-threads-real-time-search-file-sharing-presence-workspace/) | Multi-tenant workspaces, channels, membership, durable messages, threads, search, and Redis-backed live events | Python, FastAPI, Nginx, Postgres, Redis, Docker Compose |
 
 ## Requirements
 
@@ -83,6 +84,7 @@ make distributed-cache-test
 make job-scheduler-test
 make payment-system-test
 make metrics-monitoring-test
+make slack-test
 ```
 
 ## Repository Layout
@@ -228,6 +230,11 @@ examples/
     scripts/
     docker-compose.yml
   metrics-monitoring/
+    app/
+    tests/
+    scripts/
+    docker-compose.yml
+  slack/
     app/
     tests/
     scripts/
