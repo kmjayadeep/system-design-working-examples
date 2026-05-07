@@ -15,6 +15,7 @@ Runnable prototypes for common system design problems. Each example is intention
 | [LeetCode Judge](examples/leetcode) | [Hello Interview LeetCode](https://www.hellointerview.com/learn/system-design/problem-breakdowns/leetcode) | Problem browsing, cached problem details, queued code submissions, judge worker results, and competition leaderboard reads | Python, FastAPI, Nginx, Postgres, Redis, Docker Compose |
 | [WhatsApp Messaging](examples/whatsapp) | [Hello Interview WhatsApp](https://www.hellointerview.com/learn/system-design/problem-breakdowns/whatsapp) | Group chat creation, message fanout, durable offline inboxes, ack-based delivery, and presigned media attachments | Python, FastAPI, Nginx, Postgres, Redis, MinIO, Docker Compose |
 | [Distributed Rate Limiter](examples/rate-limiter) | [Hello Interview Rate Limiter](https://www.hellointerview.com/learn/system-design/problem-breakdowns/distributed-rate-limiter) | Shared Redis token buckets, atomic distributed checks, structured allow/deny responses, refill behavior, and default rule fallback | Python, FastAPI, Nginx, Redis, Docker Compose |
+| [FB Live Comments](examples/fb-live-comments) | [Hello Interview FB Live Comments](https://www.hellointerview.com/learn/system-design/problem-breakdowns/fb-live-comments) | Comment writes, cursor-paginated history, Redis-backed live streams, and near-real-time polling across replicas | Python, FastAPI, Nginx, Postgres, Redis, Docker Compose |
 | [YouTube Video Streaming](examples/youtube) | [Hello Interview YouTube](https://www.hellointerview.com/learn/system-design/problem-breakdowns/youtube) | Presigned large-video uploads, resumable multipart upload state, segment processing, manifests, and cached playback metadata | Python, FastAPI, Nginx, Postgres, Redis, MinIO, Docker Compose |
 | [Web Crawler](examples/web-crawler) | [Hello Interview Web Crawler](https://www.hellointerview.com/learn/system-design/problem-breakdowns/web-crawler) | URL frontier queue, crawl dedupe, host politeness, raw/text blob storage, and crawl progress tracking | Python, FastAPI, Nginx, Postgres, Redis, MinIO, Docker Compose |
 | [Ad Click Aggregator](examples/ad-click-aggregator) | [Hello Interview Ad Click Aggregator](https://www.hellointerview.com/learn/system-design/problem-breakdowns/ad-click-aggregator) | Server-side click redirects, Redis click buffering, idempotent event processing, and minute-level aggregate queries | Python, FastAPI, Nginx, Postgres, Redis, Docker Compose |
@@ -53,6 +54,7 @@ make tinder-test
 make leetcode-test
 make whatsapp-test
 make rate-limiter-test
+make fb-live-comments-test
 make youtube-test
 make web-crawler-test
 make ad-click-aggregator-test
@@ -111,6 +113,11 @@ examples/
     scripts/
     docker-compose.yml
   rate-limiter/
+    app/
+    tests/
+    scripts/
+    docker-compose.yml
+  fb-live-comments/
     app/
     tests/
     scripts/
