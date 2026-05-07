@@ -1,4 +1,4 @@
-.PHONY: bitly-up bitly-test bitly-test-clean bitly-down dropbox-up dropbox-test dropbox-test-clean dropbox-down gopuff-up gopuff-test gopuff-test-clean gopuff-down ticketmaster-up ticketmaster-test ticketmaster-test-clean ticketmaster-down fb-news-feed-up fb-news-feed-test fb-news-feed-test-clean fb-news-feed-down tinder-up tinder-test tinder-test-clean tinder-down leetcode-up leetcode-test leetcode-test-clean leetcode-down whatsapp-up whatsapp-test whatsapp-test-clean whatsapp-down rate-limiter-up rate-limiter-test rate-limiter-test-clean rate-limiter-down fb-live-comments-up fb-live-comments-test fb-live-comments-test-clean fb-live-comments-down fb-post-search-up fb-post-search-test fb-post-search-test-clean fb-post-search-down youtube-up youtube-test youtube-test-clean youtube-down web-crawler-up web-crawler-test web-crawler-test-clean web-crawler-down ad-click-aggregator-up ad-click-aggregator-test ad-click-aggregator-test-clean ad-click-aggregator-down news-aggregator-up news-aggregator-test news-aggregator-test-clean news-aggregator-down yelp-up yelp-test yelp-test-clean yelp-down strava-up strava-test strava-test-clean strava-down online-auction-up online-auction-test online-auction-test-clean online-auction-down price-tracking-up price-tracking-test price-tracking-test-clean price-tracking-down test
+.PHONY: bitly-up bitly-test bitly-test-clean bitly-down dropbox-up dropbox-test dropbox-test-clean dropbox-down gopuff-up gopuff-test gopuff-test-clean gopuff-down ticketmaster-up ticketmaster-test ticketmaster-test-clean ticketmaster-down fb-news-feed-up fb-news-feed-test fb-news-feed-test-clean fb-news-feed-down tinder-up tinder-test tinder-test-clean tinder-down leetcode-up leetcode-test leetcode-test-clean leetcode-down whatsapp-up whatsapp-test whatsapp-test-clean whatsapp-down rate-limiter-up rate-limiter-test rate-limiter-test-clean rate-limiter-down fb-live-comments-up fb-live-comments-test fb-live-comments-test-clean fb-live-comments-down fb-post-search-up fb-post-search-test fb-post-search-test-clean fb-post-search-down youtube-top-k-up youtube-top-k-test youtube-top-k-test-clean youtube-top-k-down youtube-up youtube-test youtube-test-clean youtube-down web-crawler-up web-crawler-test web-crawler-test-clean web-crawler-down ad-click-aggregator-up ad-click-aggregator-test ad-click-aggregator-test-clean ad-click-aggregator-down news-aggregator-up news-aggregator-test news-aggregator-test-clean news-aggregator-down yelp-up yelp-test yelp-test-clean yelp-down strava-up strava-test strava-test-clean strava-down online-auction-up online-auction-test online-auction-test-clean online-auction-down price-tracking-up price-tracking-test price-tracking-test-clean price-tracking-down test
 
 bitly-up:
 	cd examples/bitly && docker compose up --build
@@ -132,6 +132,18 @@ fb-post-search-test-clean:
 fb-post-search-down:
 	cd examples/fb-post-search && docker compose down --remove-orphans
 
+youtube-top-k-up:
+	cd examples/youtube-top-k && docker compose up --build
+
+youtube-top-k-test:
+	cd examples/youtube-top-k && trap 'docker compose down --remove-orphans' EXIT; docker compose up --build -d --remove-orphans && docker compose exec -T api-a python -m pytest -q && python scripts/smoke_test.py
+
+youtube-top-k-test-clean:
+	cd examples/youtube-top-k && docker compose down -v --remove-orphans
+
+youtube-top-k-down:
+	cd examples/youtube-top-k && docker compose down --remove-orphans
+
 youtube-up:
 	cd examples/youtube && docker compose up --build
 
@@ -228,4 +240,4 @@ price-tracking-test-clean:
 price-tracking-down:
 	cd examples/price-tracking && docker compose down --remove-orphans
 
-test: bitly-test dropbox-test gopuff-test ticketmaster-test fb-news-feed-test tinder-test leetcode-test whatsapp-test rate-limiter-test fb-live-comments-test fb-post-search-test youtube-test web-crawler-test ad-click-aggregator-test news-aggregator-test yelp-test strava-test online-auction-test price-tracking-test
+test: bitly-test dropbox-test gopuff-test ticketmaster-test fb-news-feed-test tinder-test leetcode-test whatsapp-test rate-limiter-test fb-live-comments-test fb-post-search-test youtube-top-k-test youtube-test web-crawler-test ad-click-aggregator-test news-aggregator-test yelp-test strava-test online-auction-test price-tracking-test
