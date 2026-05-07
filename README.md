@@ -16,6 +16,7 @@ Runnable prototypes for common system design problems. Each example is intention
 | [Yelp Business Search](examples/yelp) | [Hello Interview Yelp](https://www.hellointerview.com/learn/system-design/problem-breakdowns/yelp) | Business search by name/category/location, cached search results, review writes, one-review-per-user, and average rating updates | Python, FastAPI, Nginx, Postgres, Redis, Docker Compose |
 | [Strava Activity Tracking](examples/strava) | [Hello Interview Strava](https://www.hellointerview.com/learn/system-design/problem-breakdowns/strava) | Live activity tracking, offline point batch upload, lifecycle transitions, route persistence, and friend feed reads | Python, FastAPI, Nginx, Postgres, Redis, Docker Compose |
 | [Online Auction](examples/online-auction) | [Hello Interview Online Auction](https://www.hellointerview.com/learn/system-design/problem-breakdowns/online-auction) | Auction posting, transactional bid contention control, stale bid rejection, cached auction reads, and current winner display | Python, FastAPI, Nginx, Postgres, Redis, Docker Compose |
+| [Price Tracking Service](examples/price-tracking) | [Hello Interview Price Tracking Service](https://www.hellointerview.com/learn/system-design/problem-breakdowns/camelcamelcamel) | Price history reads, product price ingestion, threshold subscriptions, async notification ticks, and cache invalidation | Python, FastAPI, Nginx, Postgres, Redis, Docker Compose |
 
 ## Requirements
 
@@ -47,6 +48,7 @@ make news-aggregator-test
 make yelp-test
 make strava-test
 make online-auction-test
+make price-tracking-test
 ```
 
 ## Repository Layout
@@ -102,6 +104,11 @@ examples/
     scripts/
     docker-compose.yml
   online-auction/
+    app/
+    tests/
+    scripts/
+    docker-compose.yml
+  price-tracking/
     app/
     tests/
     scripts/
