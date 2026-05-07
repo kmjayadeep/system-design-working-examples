@@ -21,6 +21,8 @@ docker compose up --build
 
 API docs: <http://localhost:8030/docs>
 
+Manual UI: <http://localhost:8030/>
+
 MinIO console: <http://localhost:9012>
 
 Credentials:

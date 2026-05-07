@@ -19,6 +19,8 @@ docker compose up --build
 
 API docs: <http://localhost:8050/docs>
 
+Manual UI: <http://localhost:8050/>
+
 Runtime data is intentionally ephemeral. Postgres uses tmpfs and Redis persistence is disabled, so `docker compose down` wipes local click data.
 
 ## Diagram

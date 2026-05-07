@@ -32,7 +32,16 @@ def request_json(path, method="GET", payload=None, user_id="alice"):
         return exc.code, body
 
 
+def get_text(path):
+    request = Request(BASE_URL + path, headers={"connection": "close"}, method="GET")
+    with urlopen(request, timeout=10) as response:
+        return response.status, response.read().decode()
+
+
 def main():
+    status, html = get_text("/")
+    assert status == 200 and "GoPuff Local Delivery" in html
+
     instances = set()
     for _ in range(12):
         status, body = request_json("/debug/instance")

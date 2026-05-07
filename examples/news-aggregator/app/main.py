@@ -15,6 +15,7 @@ from redis.asyncio import Redis
 
 from app.config import Settings, settings
 from app.cursor import decode_cursor, encode_cursor
+from app.ui import ui_response
 
 
 class AppState:
@@ -65,6 +66,11 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="News Aggregator Prototype", lifespan=lifespan)
+
+
+@app.get("/")
+async def ui():
+    return ui_response()
 
 
 @app.get("/health")

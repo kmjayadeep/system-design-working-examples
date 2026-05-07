@@ -13,6 +13,7 @@ from redis.asyncio import Redis
 
 from app.config import settings
 from app.timeutils import minute_bucket
+from app.ui import ui_response
 
 
 class AppState:
@@ -38,6 +39,11 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Ad Click Aggregator Prototype", lifespan=lifespan)
+
+
+@app.get("/")
+async def ui():
+    return ui_response()
 
 
 @app.get("/health")

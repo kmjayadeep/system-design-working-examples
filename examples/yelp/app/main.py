@@ -13,6 +13,7 @@ from redis.asyncio import Redis
 
 from app.config import Settings, settings
 from app.geo import haversine_km
+from app.ui import ui_response
 
 
 class AppState:
@@ -68,6 +69,11 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Yelp Business Search Prototype", lifespan=lifespan)
+
+
+@app.get("/")
+async def ui():
+    return ui_response()
 
 
 @app.get("/health")

@@ -42,7 +42,16 @@ def get_bytes(url):
         return response.status, response.read()
 
 
+def get_text(path):
+    request = Request(BASE_URL + path, headers={"connection": "close"}, method="GET")
+    with urlopen(request, timeout=10) as response:
+        return response.status, response.read().decode()
+
+
 def main():
+    status, html = get_text("/")
+    assert status == 200 and "Dropbox File Sync" in html
+
     instances = set()
     for _ in range(8):
         status, body = request_json("/debug/instance")

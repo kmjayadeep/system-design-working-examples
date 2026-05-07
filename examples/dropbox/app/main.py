@@ -22,6 +22,7 @@ from app.storage import (
     presigned_part_url,
     presigned_put_url,
 )
+from app.ui import ui_response
 
 
 CREATE_SCHEMA_SQL = """
@@ -211,6 +212,11 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Dropbox System Design Prototype", lifespan=lifespan)
+
+
+@app.get("/")
+async def ui():
+    return ui_response()
 
 
 def get_state(request: Request) -> AppState:

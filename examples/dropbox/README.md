@@ -20,6 +20,8 @@ docker compose up --build
 
 API docs: <http://localhost:8010/docs>
 
+Manual UI: <http://localhost:8010/>
+
 MinIO console: <http://localhost:9002>
 
 Runtime data is intentionally ephemeral. Postgres and MinIO use tmpfs-backed data paths, so `docker compose down` wipes local metadata and files.

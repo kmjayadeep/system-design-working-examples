@@ -25,6 +25,7 @@ from app.storage import (
     put_manifest,
     put_object_bytes,
 )
+from app.ui import ui_response
 
 
 class AppState:
@@ -129,6 +130,11 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="YouTube Video Streaming Prototype", lifespan=lifespan)
+
+
+@app.get("/")
+async def ui():
+    return ui_response()
 
 
 @app.get("/health")
