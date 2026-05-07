@@ -15,6 +15,7 @@ from redis.asyncio import Redis
 
 from app.config import Settings, settings
 from app.shortener import generated_code, generated_counter_value, validate_custom_alias
+from app.ui import ui_response
 
 
 class ShortenRequest(BaseModel):
@@ -243,6 +244,11 @@ async def health(state: Annotated[AppState, Depends(get_state)]):
 @app.get("/debug/instance")
 async def debug_instance():
     return {"instance": socket.gethostname()}
+
+
+@app.get("/")
+async def ui():
+    return ui_response()
 
 
 @app.post("/shorten", response_model=ShortenResponse, status_code=201)

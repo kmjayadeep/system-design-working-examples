@@ -96,6 +96,7 @@ For WebSocket/SSE examples, extend this with upgrade headers and document whethe
 Smoke tests should prove:
 
 - the public proxy reaches both API replicas via `/debug/instance`
+- the manual UI route loads successfully
 - each functional requirement works end to end
 - important design-specific behavior works, such as cache hits, access control, chunk state, or event polling
 
@@ -128,6 +129,7 @@ Include:
 - stack and design intent
 - original system design reference link when the user provides one
 - public URLs and credentials for local-only tools
+- manual UI URL for testing the functional requirements in a browser
 - note that runtime data is ephemeral
 - Mermaid architecture diagram with proxy/API gateway, two API replicas, and backing stores
 - API examples matching the user's notes
@@ -137,3 +139,7 @@ Include:
 ## Root README
 
 Add every example to the root examples table with columns for the example, original reference link, demonstrated concepts, and stack.
+
+## Manual UI
+
+Each example should include a simple browser UI. Prefer a single server-rendered page with plain HTML, CSS, and JavaScript. It should exercise the core functional requirements manually through the same public API endpoints that the smoke test uses. Avoid frontend frameworks and build tooling unless the user asks for a richer app.

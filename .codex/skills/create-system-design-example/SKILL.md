@@ -20,10 +20,11 @@ Read [references/project-pattern.md](references/project-pattern.md) before imple
 5. Make API replicas stateless. Put shared state in backing services such as Postgres, Redis, or MinIO.
 6. Use ephemeral runtime storage. Prefer tmpfs-backed data directories and disable persistence where possible. Normal `docker compose down` should wipe local data.
 7. Add a small `/debug/instance` endpoint and make the smoke test verify the proxy reaches both API replicas.
-8. Add focused unit tests for deterministic helpers and a `scripts/smoke_test.py` that exercises the real functional requirements through the public proxy port.
-9. Add an example README with: purpose, original reference link when available, stack, run command, public ports, Mermaid diagram, API examples, smoke/unit test commands, and design notes.
-10. Update root `README.md` and `Makefile` only. Do not add CI unless the user explicitly asks.
-11. Run the example test target and stop all containers before finishing.
+8. Add a simple web UI for manually testing the functional requirements through the public proxy. Keep it basic, local, and served by the app or proxy; it does not need a frontend build step.
+9. Add focused unit tests for deterministic helpers and a `scripts/smoke_test.py` that exercises the real functional requirements through the public proxy port, including a basic assertion that the UI route loads.
+10. Add an example README with: purpose, original reference link when available, stack, run command, public ports, manual UI URL, Mermaid diagram, API examples, smoke/unit test commands, and design notes.
+11. Update root `README.md` and `Makefile` only. Do not add CI unless the user explicitly asks.
+12. Run the example test target and stop all containers before finishing.
 
 ## Implementation Defaults
 
@@ -33,6 +34,7 @@ Read [references/project-pattern.md](references/project-pattern.md) before imple
 - Use `random;` in the Nginx upstream for local demos, so repeated smoke-test requests visibly hit both replicas.
 - Add health checks to API replicas and make the proxy depend on both replicas being healthy.
 - Keep smoke tests dependency-light; standard-library `urllib` is enough unless a protocol requires more.
+- Keep UIs dependency-light; plain server-rendered HTML/CSS/JS is preferred for these prototypes.
 - Use `--remove-orphans` in Makefile down/up test paths to handle service renames cleanly.
 
 ## Validation

@@ -54,6 +54,12 @@ def get_json(path):
         return response.status, json.loads(response.read())
 
 
+def get_text(path):
+    request = Request(BASE_URL + path, headers={"connection": "close"}, method="GET")
+    with opener.open(request, timeout=5) as response:
+        return response.status, response.read().decode()
+
+
 def main():
     instances = set()
     for _ in range(8):
@@ -61,6 +67,9 @@ def main():
         assert status == 200, (status, body)
         instances.add(body["instance"])
     assert len(instances) >= 2, instances
+
+    status, html = get_text("/")
+    assert status == 200 and "Bitly URL Shortener" in html, status
 
     status, _, generated = post_json(
         "/shorten", {"long_url": "https://example.com/generated"}
