@@ -31,6 +31,7 @@ Runnable prototypes for common system design problems. Each example is intention
 | [Robinhood Trading](examples/robinhood) | [Hello Interview Robinhood](https://www.hellointerview.com/learn/system-design/problem-breakdowns/robinhood) | Market price ingestion, transactional buy/sell orders, portfolio updates, and order rejection paths | Python, FastAPI, Nginx, Postgres, Redis, Docker Compose |
 | [Google Docs Collaboration](examples/google-docs) | [Hello Interview Google Docs](https://www.hellointerview.com/learn/system-design/problem-breakdowns/google-docs) | Document sharing, versioned edit operations, conflict detection, and Redis-backed live edit events | Python, FastAPI, Nginx, Postgres, Redis, Docker Compose |
 | [Distributed Cache](examples/distributed-cache) | [Hello Interview Distributed Cache](https://www.hellointerview.com/learn/system-design/problem-breakdowns/distributed-cache) | Cache key routing, TTL writes, reads, deletes, and visible owner-node assignment | Python, FastAPI, Nginx, Redis, Docker Compose |
+| [Job Scheduler](examples/job-scheduler) | [Hello Interview Job Scheduler](https://www.hellointerview.com/learn/system-design/problem-breakdowns/job-scheduler) | Scheduled jobs, due-job claiming, retries, terminal failure, and execution history | Python, FastAPI, Nginx, Postgres, Redis, Docker Compose |
 
 ## Requirements
 
@@ -77,6 +78,7 @@ make instagram-test
 make robinhood-test
 make google-docs-test
 make distributed-cache-test
+make job-scheduler-test
 ```
 
 ## Repository Layout
@@ -207,6 +209,11 @@ examples/
     scripts/
     docker-compose.yml
   distributed-cache/
+    app/
+    tests/
+    scripts/
+    docker-compose.yml
+  job-scheduler/
     app/
     tests/
     scripts/

@@ -1,0 +1,12 @@
+from fastapi.responses import HTMLResponse
+
+
+HTML = """
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Job Scheduler Prototype</title>
+<style>body{font-family:Inter,system-ui,sans-serif;margin:0;background:#f7f7fb;color:#17202a}main{max-width:920px;margin:auto;padding:32px 20px}section{background:white;border:1px solid #d8dee4;border-radius:8px;padding:18px}.row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}label{display:block;font-weight:650;margin:12px 0 6px}input{box-sizing:border-box;width:100%;border:1px solid #b8c2cc;border-radius:6px;padding:10px;font:inherit}button{min-height:38px;padding:0 14px;border-radius:6px;border:1px solid #6d28d9;background:#7c3aed;color:white;font-weight:650}.actions{display:flex;gap:10px;margin-top:14px}.result{background:#f8fafc;border:1px solid #d8dee4;border-radius:6px;padding:12px;margin-top:14px;white-space:pre-wrap;overflow-wrap:anywhere}@media(max-width:720px){.row{grid-template-columns:1fr}}</style></head><body><main><h1>Job Scheduler</h1><p>Schedule jobs, run due jobs, retry failures, and inspect run history.</p><section><div class="row"><div><label>Name</label><input id="name" value="send-email"></div><div><label>Delay seconds</label><input id="delay" type="number" value="0"></div><div><label>Fail?</label><input id="fail" value="false"></div><div><label>Job id</label><input id="job"></div></div><div class="actions"><button id="create">Create</button><button id="run">Run due</button><button id="load">Load</button><button id="runs">Runs</button></div><div id="result" class="result">Results appear here.</div></section></main>
+<script>const out=v=>result.textContent=JSON.stringify(v,null,2);async function json(path,opt={}){const r=await fetch(path,{headers:{"content-type":"application/json"},...opt});const b=await r.json();if(!r.ok)throw b;return b}create.onclick=async()=>{try{const b=await json("/jobs",{method:"POST",body:JSON.stringify({name:name.value,delaySeconds:Number(delay.value),payload:{fail:fail.value==="true"}})});job.value=b.jobId;out(b)}catch(e){out(e)}};run.onclick=async()=>{try{out(await json("/jobs/run-due",{method:"POST"}))}catch(e){out(e)}};load.onclick=async()=>{try{out(await json(`/jobs/${job.value}`))}catch(e){out(e)}};runs.onclick=async()=>{try{out(await json(`/jobs/${job.value}/runs`))}catch(e){out(e)}};</script></body></html>
+"""
+
+
+def ui_response() -> HTMLResponse:
+    return HTMLResponse(HTML)
