@@ -1,4 +1,4 @@
-.PHONY: bitly-up bitly-test bitly-test-clean bitly-down dropbox-up dropbox-test dropbox-test-clean dropbox-down gopuff-up gopuff-test gopuff-test-clean gopuff-down ticketmaster-up ticketmaster-test ticketmaster-test-clean ticketmaster-down fb-news-feed-up fb-news-feed-test fb-news-feed-test-clean fb-news-feed-down tinder-up tinder-test tinder-test-clean tinder-down youtube-up youtube-test youtube-test-clean youtube-down web-crawler-up web-crawler-test web-crawler-test-clean web-crawler-down ad-click-aggregator-up ad-click-aggregator-test ad-click-aggregator-test-clean ad-click-aggregator-down news-aggregator-up news-aggregator-test news-aggregator-test-clean news-aggregator-down yelp-up yelp-test yelp-test-clean yelp-down strava-up strava-test strava-test-clean strava-down online-auction-up online-auction-test online-auction-test-clean online-auction-down price-tracking-up price-tracking-test price-tracking-test-clean price-tracking-down test
+.PHONY: bitly-up bitly-test bitly-test-clean bitly-down dropbox-up dropbox-test dropbox-test-clean dropbox-down gopuff-up gopuff-test gopuff-test-clean gopuff-down ticketmaster-up ticketmaster-test ticketmaster-test-clean ticketmaster-down fb-news-feed-up fb-news-feed-test fb-news-feed-test-clean fb-news-feed-down tinder-up tinder-test tinder-test-clean tinder-down leetcode-up leetcode-test leetcode-test-clean leetcode-down youtube-up youtube-test youtube-test-clean youtube-down web-crawler-up web-crawler-test web-crawler-test-clean web-crawler-down ad-click-aggregator-up ad-click-aggregator-test ad-click-aggregator-test-clean ad-click-aggregator-down news-aggregator-up news-aggregator-test news-aggregator-test-clean news-aggregator-down yelp-up yelp-test yelp-test-clean yelp-down strava-up strava-test strava-test-clean strava-down online-auction-up online-auction-test online-auction-test-clean online-auction-down price-tracking-up price-tracking-test price-tracking-test-clean price-tracking-down test
 
 bitly-up:
 	cd examples/bitly && docker compose up --build
@@ -71,6 +71,18 @@ tinder-test-clean:
 
 tinder-down:
 	cd examples/tinder && docker compose down --remove-orphans
+
+leetcode-up:
+	cd examples/leetcode && docker compose up --build
+
+leetcode-test:
+	cd examples/leetcode && trap 'docker compose down --remove-orphans' EXIT; docker compose up --build -d --remove-orphans && docker compose exec -T api-a python -m pytest -q && python scripts/smoke_test.py
+
+leetcode-test-clean:
+	cd examples/leetcode && docker compose down -v --remove-orphans
+
+leetcode-down:
+	cd examples/leetcode && docker compose down --remove-orphans
 
 youtube-up:
 	cd examples/youtube && docker compose up --build
@@ -168,4 +180,4 @@ price-tracking-test-clean:
 price-tracking-down:
 	cd examples/price-tracking && docker compose down --remove-orphans
 
-test: bitly-test dropbox-test gopuff-test ticketmaster-test fb-news-feed-test tinder-test youtube-test web-crawler-test ad-click-aggregator-test news-aggregator-test yelp-test strava-test online-auction-test price-tracking-test
+test: bitly-test dropbox-test gopuff-test ticketmaster-test fb-news-feed-test tinder-test leetcode-test youtube-test web-crawler-test ad-click-aggregator-test news-aggregator-test yelp-test strava-test online-auction-test price-tracking-test
