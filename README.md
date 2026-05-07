@@ -10,6 +10,7 @@ Runnable prototypes for common system design problems. Each example is intention
 | [Dropbox File Sync](examples/dropbox) | [Hello Interview Dropbox](https://www.hellointerview.com/learn/system-design/problem-breakdowns/dropbox) | Presigned uploads/downloads, metadata storage, sharing, sync change logs, proxy load balancing, and multipart resumable uploads | Python, FastAPI, Nginx, Postgres, MinIO, Docker Compose |
 | [GoPuff Local Delivery](examples/gopuff) | [Hello Interview GoPuff](https://www.hellointerview.com/learn/system-design/problem-breakdowns/gopuff) | Nearby distribution-center availability, Redis availability cache, multi-item orders, and serializable inventory transactions | Python, FastAPI, Nginx, Postgres, Redis, Docker Compose |
 | [Ticketmaster Booking](examples/ticketmaster) | [Hello Interview Ticketmaster](https://www.hellointerview.com/learn/system-design/problem-breakdowns/ticketmaster) | Event search, cached seat-map reads, transactional ticket reservations, booking confirmation, and double-booking prevention | Python, FastAPI, Nginx, Postgres, Redis, Docker Compose |
+| [FB News Feed](examples/fb-news-feed) | [Hello Interview FB News Feed](https://www.hellointerview.com/learn/system-design/problem-breakdowns/fb-news-feed) | Follow graph writes, post creation, async fanout-on-write, precomputed feed reads, and cursor pagination | Python, FastAPI, Nginx, Postgres, Redis, Docker Compose |
 | [YouTube Video Streaming](examples/youtube) | [Hello Interview YouTube](https://www.hellointerview.com/learn/system-design/problem-breakdowns/youtube) | Presigned large-video uploads, resumable multipart upload state, segment processing, manifests, and cached playback metadata | Python, FastAPI, Nginx, Postgres, Redis, MinIO, Docker Compose |
 | [Web Crawler](examples/web-crawler) | [Hello Interview Web Crawler](https://www.hellointerview.com/learn/system-design/problem-breakdowns/web-crawler) | URL frontier queue, crawl dedupe, host politeness, raw/text blob storage, and crawl progress tracking | Python, FastAPI, Nginx, Postgres, Redis, MinIO, Docker Compose |
 | [Ad Click Aggregator](examples/ad-click-aggregator) | [Hello Interview Ad Click Aggregator](https://www.hellointerview.com/learn/system-design/problem-breakdowns/ad-click-aggregator) | Server-side click redirects, Redis click buffering, idempotent event processing, and minute-level aggregate queries | Python, FastAPI, Nginx, Postgres, Redis, Docker Compose |
@@ -43,6 +44,7 @@ make bitly-test
 make dropbox-test
 make gopuff-test
 make ticketmaster-test
+make fb-news-feed-test
 make youtube-test
 make web-crawler-test
 make ad-click-aggregator-test
@@ -76,6 +78,11 @@ examples/
     scripts/
     docker-compose.yml
   ticketmaster/
+    app/
+    tests/
+    scripts/
+    docker-compose.yml
+  fb-news-feed/
     app/
     tests/
     scripts/
