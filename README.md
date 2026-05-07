@@ -28,6 +28,7 @@ Runnable prototypes for common system design problems. Each example is intention
 | [Online Auction](examples/online-auction) | [Hello Interview Online Auction](https://www.hellointerview.com/learn/system-design/problem-breakdowns/online-auction) | Auction posting, transactional bid contention control, stale bid rejection, cached auction reads, and current winner display | Python, FastAPI, Nginx, Postgres, Redis, Docker Compose |
 | [Price Tracking Service](examples/price-tracking) | [Hello Interview Price Tracking Service](https://www.hellointerview.com/learn/system-design/problem-breakdowns/camelcamelcamel) | Price history reads, product price ingestion, threshold subscriptions, async notification ticks, and cache invalidation | Python, FastAPI, Nginx, Postgres, Redis, Docker Compose |
 | [Instagram Photo Sharing](examples/instagram) | [Hello Interview Instagram](https://www.hellointerview.com/learn/system-design/problem-breakdowns/instagram) | Presigned media uploads, post publishing, follow graph writes, and chronological feed reads | Python, FastAPI, Nginx, Postgres, MinIO, Docker Compose |
+| [Robinhood Trading](examples/robinhood) | [Hello Interview Robinhood](https://www.hellointerview.com/learn/system-design/problem-breakdowns/robinhood) | Market price ingestion, transactional buy/sell orders, portfolio updates, and order rejection paths | Python, FastAPI, Nginx, Postgres, Redis, Docker Compose |
 
 ## Requirements
 
@@ -71,6 +72,7 @@ make strava-test
 make online-auction-test
 make price-tracking-test
 make instagram-test
+make robinhood-test
 ```
 
 ## Repository Layout
@@ -186,6 +188,11 @@ examples/
     scripts/
     docker-compose.yml
   instagram/
+    app/
+    tests/
+    scripts/
+    docker-compose.yml
+  robinhood/
     app/
     tests/
     scripts/
