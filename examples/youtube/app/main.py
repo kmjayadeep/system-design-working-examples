@@ -5,9 +5,11 @@ import math
 import socket
 import uuid
 from contextlib import asynccontextmanager
+from urllib.parse import unquote_plus
 from typing import Annotated
 
 import asyncpg
+from botocore.exceptions import ClientError
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 from redis.asyncio import Redis
@@ -19,6 +21,7 @@ from app.storage import (
     create_multipart_upload,
     ensure_bucket,
     get_object_bytes,
+    head_object,
     presigned_get_url,
     presigned_part_url,
     presigned_put_url,
@@ -50,6 +53,10 @@ class MultipartUploadRequest(BaseModel):
 
 class PartCompleteRequest(BaseModel):
     etag: str = Field(min_length=1)
+
+
+class MinioWebhookEvent(BaseModel):
+    Records: list[dict] = Field(default_factory=list)
 
 
 def get_settings() -> Settings:
@@ -115,6 +122,39 @@ async def process_video(db: asyncpg.Pool, config: Settings, video_id: uuid.UUID,
     return manifest_key
 
 
+async def verify_and_process_upload(
+    db: asyncpg.Pool,
+    redis: Redis,
+    config: Settings,
+    row: asyncpg.Record,
+) -> dict:
+    if row["status"] == "ready":
+        return {"status": "ready", "videoId": str(row["id"]), "idempotentReplay": True}
+    if row["status"] == "processing":
+        return {"status": "processing", "videoId": str(row["id"])}
+    try:
+        head_object(config, row["original_object_key"])
+    except ClientError as exc:
+        raise HTTPException(status_code=409, detail="original video object is not available") from exc
+
+    updated = await db.fetchrow(
+        """
+        UPDATE videos
+        SET status = 'processing', updated_at = now()
+        WHERE id = $1 AND status != 'ready'
+        RETURNING *
+        """,
+        row["id"],
+    )
+    if updated is None:
+        current = await db.fetchrow("SELECT * FROM videos WHERE id = $1", row["id"])
+        return {"status": current["status"], "videoId": str(row["id"]), "idempotentReplay": True}
+
+    manifest_key = await process_video(db, config, row["id"], row["original_object_key"])
+    await redis.delete(f"video:{row['id']}")
+    return {"status": "ready", "videoId": str(row["id"]), "manifestObjectKey": manifest_key}
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     state = AppState()
@@ -172,6 +212,7 @@ async def create_presigned_upload(
     )
     return {
         "videoId": str(video_id),
+        "objectKey": original_key,
         "uploadUrl": presigned_put_url(config, original_key),
         "method": "PUT",
         "status": "pending_upload",
@@ -275,10 +316,7 @@ async def complete_upload(
     row = await state.db.fetchrow("SELECT * FROM videos WHERE id = $1", video_id)
     if row is None:
         raise HTTPException(status_code=404, detail="video not found")
-    await state.db.execute("UPDATE videos SET status = 'processing' WHERE id = $1", video_id)
-    manifest_key = await process_video(state.db, config, video_id, row["original_object_key"])
-    await state.redis.delete(f"video:{video_id}")
-    return {"status": "ready", "videoId": str(video_id), "manifestObjectKey": manifest_key}
+    return await verify_and_process_upload(state.db, state.redis, config, row)
 
 
 @app.post("/videos/{video_id}/complete-multipart")
@@ -302,7 +340,38 @@ async def complete_multipart(
         row["upload_id"],
         [{"PartNumber": part["part_number"], "ETag": part["etag"]} for part in parts],
     )
-    return await complete_upload(video_id, state, config)
+    return {"status": "completed_multipart_waiting_for_storage_event", "videoId": str(video_id)}
+
+
+@app.post("/storage/events/minio")
+async def minio_storage_event(
+    payload: MinioWebhookEvent,
+    state: Annotated[AppState, Depends(get_state)],
+    config: Annotated[Settings, Depends(get_settings)],
+):
+    processed = []
+    for record in payload.Records:
+        event_name = record.get("eventName", "")
+        if "ObjectCreated" not in event_name:
+            continue
+        object_key = record.get("s3", {}).get("object", {}).get("key")
+        if not object_key:
+            continue
+        object_key = unquote_plus(object_key)
+        if not object_key.startswith("originals/"):
+            processed.append({"objectKey": object_key, "status": "ignored_processed_object"})
+            continue
+        row = await state.db.fetchrow("SELECT * FROM videos WHERE original_object_key = $1", object_key)
+        if row is None:
+            processed.append({"objectKey": object_key, "status": "ignored_missing_metadata"})
+            continue
+        try:
+            result = await verify_and_process_upload(state.db, state.redis, config, row)
+        except HTTPException:
+            processed.append({"objectKey": object_key, "status": "verification_failed"})
+            continue
+        processed.append({"objectKey": object_key, **result})
+    return {"processed": processed}
 
 
 @app.get("/videos/{video_id}")

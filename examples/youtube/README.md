@@ -8,6 +8,7 @@ Small Docker Compose prototype for a YouTube-style video upload and streaming sy
 - MinIO as local S3-compatible blob storage
 - Redis cache for hot video metadata
 - Presigned upload URLs so large video bytes bypass the API server
+- MinIO bucket notifications for asynchronous upload confirmation and processing
 - Simulated processing into multi-rendition streamable segments and a manifest file
 - Multipart upload state for resumable uploads
 
@@ -53,9 +54,9 @@ flowchart LR
     proxy -- "presigned PUT URL" --> client
     client -- "PUT original video bytes" --> blob
 
-    client -- "POST /videos/{id}/complete" --> proxy
-    apiA -- "read original, create segments + manifest" --> blob
-    apiB -- "read original, create segments + manifest" --> blob
+    blob -- "ObjectCreated webhook" --> proxy
+    apiA -- "verify original, create segments + manifest" --> blob
+    apiB -- "verify original, create segments + manifest" --> blob
     apiA -- "segment refs + ready status" --> db
     apiB -- "segment refs + ready status" --> db
 
@@ -85,13 +86,13 @@ curl -s -X POST http://localhost:8030/videos/presigned-url \
   }'
 ```
 
-After uploading bytes to the returned URL, mark the upload complete and process segments:
+After uploading bytes to the returned URL, the client does not call a completion endpoint. MinIO sends an object-created webhook to the API:
 
 ```bash
-curl -s -X POST http://localhost:8030/videos/{video_id}/complete
+POST /storage/events/minio
 ```
 
-Fetch playback metadata:
+The API decodes MinIO's native `Records[]` payload, verifies the object with `HeadObject`, then processes the video. Poll playback metadata until it becomes ready:
 
 ```bash
 curl -s http://localhost:8030/videos/{video_id}
@@ -127,4 +128,4 @@ docker compose exec -T api-a python -m pytest -q
 
 ## Design Notes
 
-This prototype mirrors the core YouTube design: upload large blobs directly to object storage, store metadata separately, process uploaded videos into streamable segments and a manifest, cache hot metadata, and return manifest/segment URLs so clients can stream incrementally.
+This prototype mirrors the core YouTube design: upload large blobs directly to object storage, store metadata separately, process storage-confirmed uploaded videos into streamable segments and a manifest, cache hot metadata, and return manifest/segment URLs so clients can stream incrementally.

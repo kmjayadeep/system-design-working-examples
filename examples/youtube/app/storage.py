@@ -96,3 +96,8 @@ def put_manifest(settings: Settings, object_key: str, manifest: dict) -> None:
         json.dumps(manifest, indent=2).encode(),
         "application/json",
     )
+
+
+def head_object(settings: Settings, object_key: str) -> dict:
+    client = s3_client(settings.s3_internal_endpoint, settings)
+    return client.head_object(Bucket=settings.s3_bucket, Key=object_key)

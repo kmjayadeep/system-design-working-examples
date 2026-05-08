@@ -25,7 +25,7 @@ HTML = """
 <body>
   <main>
     <h1>YouTube Video Streaming</h1>
-    <p>Upload bytes through a presigned URL, complete processing, then fetch the manifest and adaptive segment URLs.</p>
+    <p>Upload bytes through a presigned URL, wait for MinIO to trigger processing, then fetch the manifest and adaptive segment URLs.</p>
     <section>
       <div class="row">
         <div><label>User</label><input id="user" value="alice"></div>
@@ -33,7 +33,7 @@ HTML = """
       </div>
       <label>Description</label><input id="description" value="A local demo video">
       <label>Video bytes</label><textarea id="content" rows="4">fake video bytes for adaptive streaming demo</textarea>
-      <div class="actions"><button id="upload">Upload and process</button><button id="load">Load playback metadata</button></div>
+      <div class="actions"><button id="upload">Upload and wait</button><button id="load">Load playback metadata</button></div>
       <div id="result" class="result">No video uploaded yet.</div>
     </section>
   </main>
@@ -46,14 +46,23 @@ HTML = """
       if (!response.ok) throw body;
       return body;
     }
+    async function waitForReady(videoId) {
+      for (let i = 0; i < 40; i++) {
+        const response = await fetch(`/videos/${videoId}`, {headers: {"content-type": "application/json", "X-User-Id": document.querySelector("#user").value}});
+        const body = await response.json();
+        if (response.ok) return body;
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      throw {detail: "timed out waiting for MinIO notification and processing"};
+    }
     document.querySelector("#upload").onclick = async () => {
       try {
         const blob = new Blob([document.querySelector("#content").value.repeat(64)], {type: "application/octet-stream"});
         const upload = await json("/videos/presigned-url", {method: "POST", body: JSON.stringify({video_metadata: {title: document.querySelector("#title").value, description: document.querySelector("#description").value, size: blob.size}})});
         await fetch(upload.uploadUrl, {method: "PUT", body: blob});
-        const completed = await json(`/videos/${upload.videoId}/complete`, {method: "POST"});
+        const completed = await waitForReady(upload.videoId);
         currentVideoId = upload.videoId;
-        out({upload, completed});
+        out({upload, readyFromNotification: completed});
       } catch (error) { out(error); }
     };
     document.querySelector("#load").onclick = async () => {

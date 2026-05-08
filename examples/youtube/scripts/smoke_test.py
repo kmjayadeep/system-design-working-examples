@@ -1,4 +1,5 @@
 import json
+import time
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
@@ -48,6 +49,18 @@ def get_text(path):
         return response.status, response.read().decode()
 
 
+def wait_for_ready(video_id, timeout_seconds=30):
+    deadline = time.time() + timeout_seconds
+    last = None
+    while time.time() < deadline:
+        status, body = request_json(f"/videos/{video_id}")
+        if status == 200:
+            return body
+        last = (status, body)
+        time.sleep(0.5)
+    raise AssertionError(f"timed out waiting for async MinIO processing: {last}")
+
+
 def main():
     status, html = get_text("/")
     assert status == 200 and "YouTube Video Streaming" in html
@@ -76,11 +89,8 @@ def main():
     assert put_status == 200
 
     video_id = upload["videoId"]
-    status, completed = request_json(f"/videos/{video_id}/complete", method="POST")
-    assert status == 200 and completed["status"] == "ready", (status, completed)
-
-    status, video = request_json(f"/videos/{video_id}")
-    assert status == 200 and video["cache"] == "MISS", (status, video)
+    video = wait_for_ready(video_id)
+    assert video["cache"] == "MISS", video
     assert len(video["segments"]) >= 6
 
     status, cached = request_json(f"/videos/{video_id}")
@@ -124,7 +134,12 @@ def main():
     assert [part["status"] for part in parts["parts"]] == ["uploaded", "uploaded"]
 
     status, completed_multipart = request_json(f"/videos/{multipart_id}/complete-multipart", method="POST")
-    assert status == 200 and completed_multipart["status"] == "ready", (status, completed_multipart)
+    assert status == 200 and completed_multipart["status"] == "completed_multipart_waiting_for_storage_event", (
+        status,
+        completed_multipart,
+    )
+    multipart_video = wait_for_ready(multipart_id)
+    assert multipart_video["videoMetadata"]["status"] == "ready", multipart_video
 
     print(f"ok proxy instances={sorted(instances)}")
     print(f"ok video={video_id}")

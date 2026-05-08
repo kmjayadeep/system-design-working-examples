@@ -4,6 +4,7 @@ import socket
 import uuid
 from contextlib import asynccontextmanager
 from typing import Annotated, Literal
+from urllib.parse import unquote_plus
 
 import asyncpg
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
@@ -29,6 +30,10 @@ class PublishPostRequest(BaseModel):
 
 class FollowRequest(BaseModel):
     user_id: str = Field(alias="userId", min_length=1)
+
+
+class MinioWebhookEvent(BaseModel):
+    Records: list[dict] = Field(default_factory=list)
 
 
 def media_object_key(owner_id: str, post_id: str, media_type: str) -> str:
@@ -59,6 +64,20 @@ def post_payload(row: asyncpg.Record, config: Settings) -> dict:
         "mediaUrl": presigned_get_url(config, row["object_key"]) if row["status"] == "published" else None,
         "createdAt": row["created_at"].isoformat(),
     }
+
+
+async def mark_media_uploaded(db: asyncpg.Pool, config: Settings, row: asyncpg.Record) -> dict:
+    head_object(config, row["object_key"])
+    updated = await db.fetchrow(
+        """
+        UPDATE posts
+        SET status = 'uploaded'
+        WHERE id = $1 AND status = 'pending'
+        RETURNING *
+        """,
+        row["id"],
+    )
+    return post_payload(updated or row, config)
 
 
 @asynccontextmanager
@@ -114,6 +133,7 @@ async def create_media_upload(
     )
     return {
         "postId": str(post_id),
+        "objectKey": object_key,
         "uploadUrl": presigned_put_url(config, object_key),
         "method": "PUT",
         "status": "pending",
@@ -132,6 +152,8 @@ async def publish_post(
     if row is None:
         raise HTTPException(status_code=404, detail="pending post not found")
     try:
+        if row["status"] == "pending":
+            raise HTTPException(status_code=409, detail="media upload has not been confirmed by object storage yet")
         head_object(config, row["object_key"])
     except Exception as exc:
         raise HTTPException(status_code=409, detail="media has not been uploaded yet") from exc
@@ -146,6 +168,47 @@ async def publish_post(
         payload.post_id,
     )
     return post_payload(row, config)
+
+
+@app.get("/posts/{post_id}/upload-status")
+async def upload_status(
+    post_id: uuid.UUID,
+    actor_user_id: Annotated[str, Depends(user_id)],
+    state: Annotated[AppState, Depends(get_state)],
+    config: Annotated[Settings, Depends(get_settings)],
+):
+    row = await state.db.fetchrow("SELECT * FROM posts WHERE id = $1 AND user_id = $2", post_id, actor_user_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="post not found")
+    return post_payload(row, config)
+
+
+@app.post("/storage/events/minio")
+async def minio_storage_event(
+    payload: MinioWebhookEvent,
+    state: Annotated[AppState, Depends(get_state)],
+    config: Annotated[Settings, Depends(get_settings)],
+):
+    processed = []
+    for record in payload.Records:
+        event_name = record.get("eventName", "")
+        if "ObjectCreated" not in event_name:
+            continue
+        object_key = record.get("s3", {}).get("object", {}).get("key")
+        if not object_key:
+            continue
+        object_key = unquote_plus(object_key)
+        row = await state.db.fetchrow("SELECT * FROM posts WHERE object_key = $1", object_key)
+        if row is None:
+            processed.append({"objectKey": object_key, "status": "ignored_missing_metadata"})
+            continue
+        try:
+            result = await mark_media_uploaded(state.db, config, row)
+        except Exception:
+            processed.append({"objectKey": object_key, "status": "verification_failed"})
+            continue
+        processed.append({"objectKey": object_key, "postId": result["postId"], "status": result["status"]})
+    return {"processed": processed}
 
 
 @app.post("/follows", status_code=201)

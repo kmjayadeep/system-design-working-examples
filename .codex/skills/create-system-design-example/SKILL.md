@@ -37,6 +37,46 @@ Read [references/project-pattern.md](references/project-pattern.md) before imple
 - Keep UIs dependency-light; plain server-rendered HTML/CSS/JS is preferred for these prototypes.
 - Use `--remove-orphans` in Makefile down/up test paths to handle service renames cleanly.
 
+## MinIO / S3 Upload Completion
+
+When an example uses presigned uploads and has a metadata transition such as `pending -> uploaded`, `pending -> published`, or `pending_upload -> ready`, do not trust the client to mark the upload complete.
+
+Use real MinIO bucket notifications in Compose:
+
+- Configure the MinIO service with a webhook target such as:
+
+```yaml
+environment:
+  MINIO_NOTIFY_WEBHOOK_ENABLE_example: "on"
+  MINIO_NOTIFY_WEBHOOK_ENDPOINT_example: "http://proxy/storage/events/minio"
+```
+
+- Add a one-shot `minio-events` setup container using `minio/mc`:
+
+```yaml
+minio-events:
+  image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+  depends_on:
+    minio:
+      condition: service_healthy
+    proxy:
+      condition: service_started
+  entrypoint: /bin/sh
+  command:
+    - -c
+    - |
+      set -eu
+      mc alias set local http://minio:9000 minioadmin minioadmin
+      mc mb --ignore-existing local/<bucket>
+      mc event remove --force local/<bucket> arn:minio:sqs::example:webhook || true
+      mc event add local/<bucket> arn:minio:sqs::example:webhook --event put
+      mc event list local/<bucket>
+```
+
+- Implement a webhook endpoint that accepts MinIO's native `Records[]` payload, decodes `record.s3.object.key` with `unquote_plus`, ignores unrelated object keys, calls `HeadObject`, verifies size/metadata when available, and performs an idempotent status transition.
+- Smoke tests should upload bytes to the presigned URL and then poll the API until storage-confirmed status appears. They should not call a fake event endpoint or a client-side completion endpoint for simple uploads.
+- Client completion endpoints may exist as local hints for multipart or manual testing, but the normal simple-upload path should be asynchronous and storage-confirmed.
+
 ## Validation
 
 Run:

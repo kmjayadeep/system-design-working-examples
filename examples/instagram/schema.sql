@@ -4,7 +4,7 @@ CREATE TABLE posts (
     caption TEXT NOT NULL,
     media_type TEXT NOT NULL CHECK (media_type IN ('photo', 'video')),
     object_key TEXT NOT NULL UNIQUE,
-    status TEXT NOT NULL CHECK (status IN ('pending', 'published')),
+    status TEXT NOT NULL CHECK (status IN ('pending', 'uploaded', 'published')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

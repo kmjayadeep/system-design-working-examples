@@ -59,6 +59,8 @@ services:
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_NOTIFY_WEBHOOK_ENABLE_instagram: "on"
+      MINIO_NOTIFY_WEBHOOK_ENDPOINT_instagram: "http://proxy/storage/events/minio"
     ports:
       - "8211:9000"
       - "8212:9001"
@@ -69,3 +71,21 @@ services:
       interval: 2s
       timeout: 3s
       retries: 20
+
+  minio-events:
+    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    depends_on:
+      minio:
+        condition: service_healthy
+      proxy:
+        condition: service_started
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        set -eu
+        mc alias set local http://minio:9000 minioadmin minioadmin
+        mc mb --ignore-existing local/instagram-media
+        mc event remove --force local/instagram-media arn:minio:sqs::instagram:webhook || true
+        mc event add local/instagram-media arn:minio:sqs::instagram:webhook --event put
+        mc event list local/instagram-media

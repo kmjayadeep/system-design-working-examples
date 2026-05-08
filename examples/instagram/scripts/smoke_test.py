@@ -1,4 +1,5 @@
 import json
+import time
 from urllib.request import Request, urlopen
 
 
@@ -29,10 +30,24 @@ def put_bytes(url: str, data: bytes):
         return response.status
 
 
+def wait_for_media_uploaded(post_id: str, user_id: str, timeout_seconds=20):
+    deadline = time.time() + timeout_seconds
+    last = None
+    while time.time() < deadline:
+        status, body = request_json(f"/posts/{post_id}/upload-status", user_id=user_id)
+        if status == 200 and body["status"] == "uploaded":
+            return body
+        last = (status, body)
+        time.sleep(0.5)
+    raise AssertionError(f"timed out waiting for async MinIO notification: {last}")
+
+
 def publish_for(user_id: str, caption: str, media_type: str = "photo"):
     status, upload = request_json("/media/uploads", method="POST", payload={"mediaType": media_type}, user_id=user_id)
     assert status == 201 and upload["status"] == "pending", (status, upload)
     assert put_bytes(upload["uploadUrl"], b"fake image bytes") == 200
+    uploaded = wait_for_media_uploaded(upload["postId"], user_id)
+    assert uploaded["status"] == "uploaded", uploaded
     status, post = request_json("/posts", method="POST", payload={"postId": upload["postId"], "caption": caption}, user_id=user_id)
     assert status == 201 and post["caption"] == caption and post["mediaUrl"], (status, post)
     return post

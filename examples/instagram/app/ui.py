@@ -25,7 +25,7 @@ HTML = """
 <body>
   <main>
     <h1>Instagram</h1>
-    <p>Create media upload slots, publish posts with captions, follow users, and read a chronological feed.</p>
+    <p>Create media upload slots, wait for MinIO upload confirmation, publish posts with captions, follow users, and read a chronological feed.</p>
     <section>
       <div class="row">
         <div><label>User</label><input id="user" value="alice"></div>
@@ -35,7 +35,7 @@ HTML = """
       </div>
       <label>Caption</label><textarea id="caption" rows="3">first post from a local prototype</textarea>
       <div class="actions"><button id="upload">Create upload URL</button><button id="publish">Publish post</button><button id="follow">Follow</button><button id="feed">Feed</button></div>
-      <div id="result" class="result">Results appear here. Upload the media bytes with the returned PUT URL, then publish.</div>
+      <div id="result" class="result">Results appear here. Upload the media bytes with the returned PUT URL, wait for the notification, then publish.</div>
     </section>
   </main>
   <script>
@@ -46,6 +46,14 @@ HTML = """
       if (!response.ok) throw body;
       return body;
     }
+    async function waitForMediaUploaded(postId, user) {
+      for (let i = 0; i < 30; i++) {
+        const body = await json(`/posts/${postId}/upload-status`, {}, user);
+        if (body.status === "uploaded") return body;
+        await new Promise(resolve => setTimeout(resolve, 400));
+      }
+      throw {detail: "timed out waiting for MinIO notification"};
+    }
     document.querySelector("#upload").onclick = async () => {
       try {
         const body = await json("/media/uploads", {method: "POST", body: JSON.stringify({mediaType: document.querySelector("#mediaType").value})}, document.querySelector("#user").value);
@@ -53,7 +61,7 @@ HTML = """
         out(body);
       } catch (error) { out(error); }
     };
-    document.querySelector("#publish").onclick = async () => { try { out(await json("/posts", {method: "POST", body: JSON.stringify({postId: document.querySelector("#postId").value, caption: document.querySelector("#caption").value})}, document.querySelector("#user").value)); } catch (error) { out(error); } };
+    document.querySelector("#publish").onclick = async () => { try { const uploaded = await waitForMediaUploaded(document.querySelector("#postId").value, document.querySelector("#user").value); const post = await json("/posts", {method: "POST", body: JSON.stringify({postId: document.querySelector("#postId").value, caption: document.querySelector("#caption").value})}, document.querySelector("#user").value); out({uploaded, post}); } catch (error) { out(error); } };
     document.querySelector("#follow").onclick = async () => { try { out(await json("/follows", {method: "POST", body: JSON.stringify({userId: document.querySelector("#followee").value})}, document.querySelector("#user").value)); } catch (error) { out(error); } };
     document.querySelector("#feed").onclick = async () => { try { out(await json("/feed", {}, document.querySelector("#user").value)); } catch (error) { out(error); } };
   </script>
