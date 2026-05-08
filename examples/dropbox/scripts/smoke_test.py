@@ -77,8 +77,22 @@ def main():
     assert status == 200
 
     file_id = upload["file_id"]
-    status, completed = request_json(f"/files/{file_id}/complete", method="POST")
+    status, pending_file = request_json(f"/files/{file_id}")
+    assert status == 409 and "pending" in pending_file["detail"], (status, pending_file)
+
+    status, completed = request_json(
+        "/storage/events/object-created",
+        method="POST",
+        payload={"object_key": upload["object_key"], "event_name": "ObjectCreated:Put"},
+    )
     assert status == 200 and completed["status"] == "uploaded", (status, completed)
+
+    status, duplicate_event = request_json(
+        "/storage/events/object-created",
+        method="POST",
+        payload={"object_key": upload["object_key"], "event_name": "ObjectCreated:Put"},
+    )
+    assert status == 200 and duplicate_event["status"] == "already_uploaded", (status, duplicate_event)
 
     status, file_info = request_json(f"/files/{file_id}")
     assert status == 200, (status, file_info)

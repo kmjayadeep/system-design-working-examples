@@ -7,6 +7,7 @@ Small Docker Compose prototype for a Dropbox-style file storage service:
 - Postgres metadata, share, chunk, and change-event tables
 - MinIO as local S3-compatible blob storage
 - Presigned URLs so file bytes go directly between client and blob storage
+- Object-created event endpoint that models S3 notifications before metadata is marked uploaded
 - Download URLs that model CDN-backed presigned downloads
 - Share table optimized for "files shared with this user"
 - Sync polling through a per-user change log
@@ -51,7 +52,7 @@ flowchart LR
     apiB -- "metadata: pending" --> db
     proxy -- "presigned PUT URL" --> client
     client -- "PUT bytes directly" --> blob
-    client -- "POST /files/{id}/complete" --> proxy
+    blob -- "ObjectCreated notification" --> proxy
     apiA -- "HEAD object + status uploaded" --> blob
     apiB -- "HEAD object + status uploaded" --> blob
     apiA -- "change event: created" --> db
@@ -93,11 +94,22 @@ POST /files/presigned-url
 }
 ```
 
-The server stores metadata as `pending` and returns a presigned `PUT` URL. After uploading bytes to blob storage, call:
+The server stores metadata as `pending` and returns a presigned `PUT` URL. In production, S3 would emit an object-created notification after the client uploads bytes. In this local demo, simulate that notification:
 
 ```http
-POST /files/{file_id}/complete
+POST /storage/events/object-created
 ```
+
+```json
+{
+  "object_key": "alice/<file-id>/notes.txt",
+  "event_name": "ObjectCreated:Put"
+}
+```
+
+The backend does not trust this event blindly. It looks up file metadata by object key, calls `HeadObject`, verifies the uploaded object size, and only then marks the file `uploaded` and writes the owner's sync change event.
+
+`POST /files/{file_id}/complete` still exists as a client hint for local experimentation, but it uses the same object-store verification path and is not authoritative by itself.
 
 Download metadata and a presigned download URL:
 
@@ -167,6 +179,8 @@ Complete after all parts are uploaded:
 POST /files/{file_id}/complete-multipart
 ```
 
+For multipart uploads, S3 emits `ObjectCreated:CompleteMultipartUpload` after the backend completes the multipart upload. The demo endpoint immediately verifies the completed object with `HeadObject` and applies the same uploaded transition.
+
 ## Try It
 
 ```bash
@@ -182,5 +196,7 @@ docker compose exec -T api-a python -m pytest -q
 ## Design Notes
 
 This prototype follows the Hello Interview Dropbox design: store metadata separately from file bytes, use presigned URLs to avoid routing large files through the app server, keep shares in a separate table, and model device sync with change events.
+
+Upload completion is intentionally storage-confirmed. Clients can report progress, but the backend marks a file uploaded only after object storage can prove the object exists and matches the metadata.
 
 Source: <https://www.hellointerview.com/learn/system-design/problem-breakdowns/dropbox>

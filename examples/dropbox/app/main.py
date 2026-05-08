@@ -86,6 +86,7 @@ class PresignedUploadRequest(BaseModel):
 
 class PresignedUploadResponse(BaseModel):
     file_id: uuid.UUID
+    object_key: str
     upload_url: str
     method: str = "PUT"
     expires_in_seconds: int
@@ -106,6 +107,7 @@ class MultipartPartUrl(BaseModel):
 
 class MultipartUploadResponse(BaseModel):
     file_id: uuid.UUID
+    object_key: str
     upload_id: str
     chunk_size: int
     parts: list[MultipartPartUrl]
@@ -118,6 +120,11 @@ class PartCompleteRequest(BaseModel):
 
 class ShareRequest(BaseModel):
     users: list[str] = Field(min_length=1)
+
+
+class StorageObjectCreatedEvent(BaseModel):
+    object_key: str = Field(min_length=1)
+    event_name: str = Field(default="ObjectCreated:Put")
 
 
 def get_settings() -> Settings:
@@ -160,6 +167,41 @@ async def record_change(
         event_type,
         json.dumps(metadata),
     )
+
+
+async def mark_uploaded_from_storage_event(
+    db: asyncpg.Pool,
+    file_row: asyncpg.Record,
+    config: Settings,
+) -> dict:
+    object_meta = head_object(config, file_row["object_key"])
+    content_length = object_meta.get("ContentLength")
+    if content_length is not None and int(content_length) != int(file_row["size"]):
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": "uploaded object size does not match metadata",
+                "expected": file_row["size"],
+                "actual": content_length,
+            },
+        )
+
+    updated = await db.fetchrow(
+        """
+        UPDATE files
+        SET status = 'uploaded', updated_at = now()
+        WHERE id = $1 AND status != 'uploaded'
+        RETURNING *
+        """,
+        file_row["id"],
+    )
+    if updated is None:
+        current = await db.fetchrow("SELECT * FROM files WHERE id = $1", file_row["id"])
+        return {"status": "already_uploaded", "fileMetadata": metadata_from_row(current)}
+
+    metadata = metadata_from_row(updated)
+    await record_change(db, updated["owner_id"], updated["id"], "created", metadata)
+    return {"status": "uploaded", "fileMetadata": metadata}
 
 
 async def fetch_accessible_file(
@@ -259,6 +301,7 @@ async def create_presigned_upload(
     )
     return PresignedUploadResponse(
         file_id=file_id,
+        object_key=object_key,
         upload_url=presigned_put_url(config, object_key),
         expires_in_seconds=config.presigned_url_ttl_seconds,
         status="pending",
@@ -320,6 +363,7 @@ async def create_multipart_presigned_upload(
     ]
     return MultipartUploadResponse(
         file_id=file_id,
+        object_key=object_key,
         upload_id=upload_id,
         chunk_size=payload.chunk_size,
         parts=parts,
@@ -387,24 +431,13 @@ async def complete_upload(
     state: Annotated[AppState, Depends(get_state)],
     config: Annotated[Settings, Depends(get_settings)],
 ):
+    # Client completion is only a hint. The backend still verifies object-store
+    # metadata before applying the same transition as a storage event.
     row = await fetch_owned_file(state.db, file_id, actor_user_id)
     try:
-        head_object(config, row["object_key"])
+        return await mark_uploaded_from_storage_event(state.db, row, config)
     except ClientError as exc:
         raise HTTPException(status_code=409, detail="object has not been uploaded yet") from exc
-
-    updated = await state.db.fetchrow(
-        """
-        UPDATE files
-        SET status = 'uploaded', updated_at = now()
-        WHERE id = $1
-        RETURNING *
-        """,
-        file_id,
-    )
-    metadata = metadata_from_row(updated)
-    await record_change(state.db, actor_user_id, file_id, "created", metadata)
-    return {"status": "uploaded", "fileMetadata": metadata}
 
 
 @app.post("/files/{file_id}/complete-multipart")
@@ -439,18 +472,23 @@ async def complete_multipart(
             for part in parts
         ],
     )
-    updated = await state.db.fetchrow(
-        """
-        UPDATE files
-        SET status = 'uploaded', updated_at = now()
-        WHERE id = $1
-        RETURNING *
-        """,
-        file_id,
-    )
-    metadata = metadata_from_row(updated)
-    await record_change(state.db, actor_user_id, file_id, "created", metadata)
-    return {"status": "uploaded", "fileMetadata": metadata}
+    return await mark_uploaded_from_storage_event(state.db, row, config)
+
+
+@app.post("/storage/events/object-created")
+async def storage_object_created(
+    payload: StorageObjectCreatedEvent,
+    state: Annotated[AppState, Depends(get_state)],
+    config: Annotated[Settings, Depends(get_settings)],
+):
+    row = await state.db.fetchrow("SELECT * FROM files WHERE object_key = $1", payload.object_key)
+    if row is None:
+        raise HTTPException(status_code=404, detail="file metadata not found for object key")
+    try:
+        result = await mark_uploaded_from_storage_event(state.db, row, config)
+    except ClientError as exc:
+        raise HTTPException(status_code=409, detail="object store event could not be verified with HeadObject") from exc
+    return {**result, "eventName": payload.event_name}
 
 
 @app.get("/files/changes")

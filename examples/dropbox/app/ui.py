@@ -25,7 +25,7 @@ HTML = """
 <body>
   <main>
     <h1>Dropbox File Sync</h1>
-    <p>Upload through a presigned URL, complete the file, share it, download it, and poll change events.</p>
+    <p>Upload through a presigned URL, simulate an object-store event, share it, download it, and poll change events.</p>
     <section>
       <h2>Upload File</h2>
       <div class="row">
@@ -33,7 +33,7 @@ HTML = """
         <div><label>File name</label><input id="name" value="notes.txt"></div>
       </div>
       <label>File contents</label><textarea id="content" rows="4">Dropbox prototype file contents</textarea>
-      <div class="actions"><button id="upload">Upload and complete</button><button id="download">Download current file</button></div>
+      <div class="actions"><button id="upload">Upload and send storage event</button><button id="download">Download current file</button></div>
       <div id="upload-result" class="result">No file uploaded yet.</div>
     </section>
     <section>
@@ -61,9 +61,9 @@ HTML = """
         const blob = new Blob([text], {type: "text/plain"});
         const upload = await json("/files/presigned-url", {method: "POST", body: JSON.stringify({file_metadata: {name: document.querySelector("#name").value, size: blob.size, mime_type: "text/plain", fingerprint: String(blob.size)}})});
         await fetch(upload.upload_url, {method: "PUT", body: blob});
-        const done = await json(`/files/${upload.file_id}/complete`, {method: "POST"});
+        const done = await json("/storage/events/object-created", {method: "POST", body: JSON.stringify({object_key: upload.object_key, event_name: "ObjectCreated:Put"})});
         currentFileId = upload.file_id;
-        out("#upload-result", {upload, completed: done});
+        out("#upload-result", {upload, storageEvent: done});
       } catch (error) { out("#upload-result", error); }
     };
     document.querySelector("#download").onclick = async () => {
