@@ -25,7 +25,7 @@ HTML = """
 <body>
   <main>
     <h1>Dropbox File Sync</h1>
-    <p>Upload through a presigned URL, simulate an object-store event, share it, download it, and poll change events.</p>
+    <p>Upload through a presigned URL, wait for the MinIO object-created notification, share it, download it, and poll change events.</p>
     <section>
       <h2>Upload File</h2>
       <div class="row">
@@ -33,7 +33,7 @@ HTML = """
         <div><label>File name</label><input id="name" value="notes.txt"></div>
       </div>
       <label>File contents</label><textarea id="content" rows="4">Dropbox prototype file contents</textarea>
-      <div class="actions"><button id="upload">Upload and send storage event</button><button id="download">Download current file</button></div>
+      <div class="actions"><button id="upload">Upload and wait for event</button><button id="download">Download current file</button></div>
       <div id="upload-result" class="result">No file uploaded yet.</div>
     </section>
     <section>
@@ -55,15 +55,24 @@ HTML = """
       if (!response.ok) throw body;
       return body;
     }
+    async function waitForUploaded(fileId) {
+      for (let i = 0; i < 20; i++) {
+        const response = await fetch(`/files/${fileId}`, {headers: {"content-type": "application/json", "X-User-Id": document.querySelector("#user").value}});
+        const body = await response.json();
+        if (response.ok) return body;
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+      throw {detail: "timed out waiting for MinIO notification"};
+    }
     document.querySelector("#upload").onclick = async () => {
       try {
         const text = document.querySelector("#content").value;
         const blob = new Blob([text], {type: "text/plain"});
         const upload = await json("/files/presigned-url", {method: "POST", body: JSON.stringify({file_metadata: {name: document.querySelector("#name").value, size: blob.size, mime_type: "text/plain", fingerprint: String(blob.size)}})});
         await fetch(upload.upload_url, {method: "PUT", body: blob});
-        const done = await json("/storage/events/object-created", {method: "POST", body: JSON.stringify({object_key: upload.object_key, event_name: "ObjectCreated:Put"})});
+        const done = await waitForUploaded(upload.file_id);
         currentFileId = upload.file_id;
-        out("#upload-result", {upload, storageEvent: done});
+        out("#upload-result", {upload, uploadedFromNotification: done});
       } catch (error) { out("#upload-result", error); }
     };
     document.querySelector("#download").onclick = async () => {

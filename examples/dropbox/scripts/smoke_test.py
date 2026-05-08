@@ -1,4 +1,5 @@
 import json
+import time
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
@@ -48,6 +49,18 @@ def get_text(path):
         return response.status, response.read().decode()
 
 
+def wait_for_uploaded(file_id, user_id="alice", timeout_seconds=20):
+    deadline = time.time() + timeout_seconds
+    last = None
+    while time.time() < deadline:
+        status, body = request_json(f"/files/{file_id}", user_id=user_id)
+        if status == 200:
+            return body
+        last = (status, body)
+        time.sleep(0.5)
+    raise AssertionError(f"timed out waiting for async MinIO notification: {last}")
+
+
 def main():
     status, html = get_text("/")
     assert status == 200 and "Dropbox File Sync" in html
@@ -73,29 +86,17 @@ def main():
         },
     )
     assert status == 201, (status, upload)
-    status, _ = put_bytes(upload["upload_url"], content)
-    assert status == 200
-
     file_id = upload["file_id"]
+
     status, pending_file = request_json(f"/files/{file_id}")
     assert status == 409 and "pending" in pending_file["detail"], (status, pending_file)
 
-    status, completed = request_json(
-        "/storage/events/object-created",
-        method="POST",
-        payload={"object_key": upload["object_key"], "event_name": "ObjectCreated:Put"},
-    )
-    assert status == 200 and completed["status"] == "uploaded", (status, completed)
+    status, _ = put_bytes(upload["upload_url"], content)
+    assert status == 200
 
-    status, duplicate_event = request_json(
-        "/storage/events/object-created",
-        method="POST",
-        payload={"object_key": upload["object_key"], "event_name": "ObjectCreated:Put"},
-    )
-    assert status == 200 and duplicate_event["status"] == "already_uploaded", (status, duplicate_event)
+    file_info = wait_for_uploaded(file_id)
+    assert file_info["fileMetadata"]["status"] == "uploaded", file_info
 
-    status, file_info = request_json(f"/files/{file_id}")
-    assert status == 200, (status, file_info)
     status, downloaded = get_bytes(file_info["downloadUrl"])
     assert status == 200 and downloaded == content, downloaded
 

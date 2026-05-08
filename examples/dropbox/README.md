@@ -7,7 +7,7 @@ Small Docker Compose prototype for a Dropbox-style file storage service:
 - Postgres metadata, share, chunk, and change-event tables
 - MinIO as local S3-compatible blob storage
 - Presigned URLs so file bytes go directly between client and blob storage
-- Object-created event endpoint that models S3 notifications before metadata is marked uploaded
+- MinIO bucket notifications that call the API asynchronously before metadata is marked uploaded
 - Download URLs that model CDN-backed presigned downloads
 - Share table optimized for "files shared with this user"
 - Sync polling through a per-user change log
@@ -52,7 +52,7 @@ flowchart LR
     apiB -- "metadata: pending" --> db
     proxy -- "presigned PUT URL" --> client
     client -- "PUT bytes directly" --> blob
-    blob -- "ObjectCreated notification" --> proxy
+    blob -- "ObjectCreated webhook" --> proxy
     apiA -- "HEAD object + status uploaded" --> blob
     apiB -- "HEAD object + status uploaded" --> blob
     apiA -- "change event: created" --> db
@@ -94,22 +94,15 @@ POST /files/presigned-url
 }
 ```
 
-The server stores metadata as `pending` and returns a presigned `PUT` URL. In production, S3 would emit an object-created notification after the client uploads bytes. In this local demo, simulate that notification:
+The server stores metadata as `pending` and returns a presigned `PUT` URL. After the client uploads bytes to MinIO, the client does not call the API again. MinIO sends an object-created webhook to the API through the internal Nginx proxy:
 
 ```http
-POST /storage/events/object-created
+POST /storage/events/minio
 ```
 
-```json
-{
-  "object_key": "alice/<file-id>/notes.txt",
-  "event_name": "ObjectCreated:Put"
-}
-```
+The backend does not trust the webhook blindly. It decodes the MinIO event payload, looks up file metadata by object key, calls `HeadObject`, verifies the uploaded object size, and only then marks the file `uploaded` and writes the owner's sync change event.
 
-The backend does not trust this event blindly. It looks up file metadata by object key, calls `HeadObject`, verifies the uploaded object size, and only then marks the file `uploaded` and writes the owner's sync change event.
-
-`POST /files/{file_id}/complete` still exists as a client hint for local experimentation, but it uses the same object-store verification path and is not authoritative by itself.
+`POST /files/{file_id}/complete` still exists as a client hint for local experimentation, but it uses the same object-store verification path and is not authoritative by itself. The normal demo path is fully asynchronous: upload bytes, then poll `GET /files/{file_id}` until it becomes available.
 
 Download metadata and a presigned download URL:
 
@@ -198,5 +191,18 @@ docker compose exec -T api-a python -m pytest -q
 This prototype follows the Hello Interview Dropbox design: store metadata separately from file bytes, use presigned URLs to avoid routing large files through the app server, keep shares in a separate table, and model device sync with change events.
 
 Upload completion is intentionally storage-confirmed. Clients can report progress, but the backend marks a file uploaded only after object storage can prove the object exists and matches the metadata.
+
+The Compose stack configures MinIO notifications with:
+
+```text
+MINIO_NOTIFY_WEBHOOK_ENABLE_dropbox=on
+MINIO_NOTIFY_WEBHOOK_ENDPOINT_dropbox=http://proxy/storage/events/minio
+```
+
+and a one-shot `minio-events` setup container runs:
+
+```bash
+mc event add local/dropbox-files arn:minio:sqs::dropbox:webhook --event put
+```
 
 Source: <https://www.hellointerview.com/learn/system-design/problem-breakdowns/dropbox>

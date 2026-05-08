@@ -59,6 +59,8 @@ services:
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_NOTIFY_WEBHOOK_ENABLE_dropbox: "on"
+      MINIO_NOTIFY_WEBHOOK_ENDPOINT_dropbox: "http://proxy/storage/events/minio"
     ports:
       - "9001:9000"
       - "9002:9001"
@@ -69,3 +71,21 @@ services:
       interval: 2s
       timeout: 3s
       retries: 20
+
+  minio-events:
+    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    depends_on:
+      minio:
+        condition: service_healthy
+      proxy:
+        condition: service_started
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        set -eu
+        mc alias set local http://minio:9000 minioadmin minioadmin
+        mc mb --ignore-existing local/dropbox-files
+        mc event remove --force local/dropbox-files arn:minio:sqs::dropbox:webhook || true
+        mc event add local/dropbox-files arn:minio:sqs::dropbox:webhook --event put
+        mc event list local/dropbox-files

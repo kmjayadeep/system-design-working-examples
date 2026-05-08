@@ -5,6 +5,7 @@ import json
 import socket
 import uuid
 from contextlib import asynccontextmanager
+from urllib.parse import unquote_plus
 from typing import Annotated
 
 import asyncpg
@@ -125,6 +126,10 @@ class ShareRequest(BaseModel):
 class StorageObjectCreatedEvent(BaseModel):
     object_key: str = Field(min_length=1)
     event_name: str = Field(default="ObjectCreated:Put")
+
+
+class MinioWebhookEvent(BaseModel):
+    Records: list[dict] = Field(default_factory=list)
 
 
 def get_settings() -> Settings:
@@ -489,6 +494,34 @@ async def storage_object_created(
     except ClientError as exc:
         raise HTTPException(status_code=409, detail="object store event could not be verified with HeadObject") from exc
     return {**result, "eventName": payload.event_name}
+
+
+@app.post("/storage/events/minio")
+async def minio_storage_event(
+    payload: MinioWebhookEvent,
+    state: Annotated[AppState, Depends(get_state)],
+    config: Annotated[Settings, Depends(get_settings)],
+):
+    processed = []
+    for record in payload.Records:
+        event_name = record.get("eventName", "")
+        if "ObjectCreated" not in event_name:
+            continue
+        object_key = record.get("s3", {}).get("object", {}).get("key")
+        if not object_key:
+            continue
+        object_key = unquote_plus(object_key)
+        row = await state.db.fetchrow("SELECT * FROM files WHERE object_key = $1", object_key)
+        if row is None:
+            processed.append({"objectKey": object_key, "status": "ignored_missing_metadata"})
+            continue
+        try:
+            result = await mark_uploaded_from_storage_event(state.db, row, config)
+        except ClientError:
+            processed.append({"objectKey": object_key, "status": "verification_failed"})
+            continue
+        processed.append({"objectKey": object_key, **result})
+    return {"processed": processed}
 
 
 @app.get("/files/changes")
